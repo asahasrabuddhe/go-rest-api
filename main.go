@@ -4,25 +4,40 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
+	"strconv"
+
+	//v1 "github.com/go-chi/chi/_examples/versions/presenter/v1"
 	"github.com/go-chi/chi/middleware"
-	"google.golang.org/genproto/googleapis/type/date"
-	"io/ioutil"
+	//"github.com/pkg/errors"
 	"log"
+
+	//"google.golang.org/genproto/googleapis/type/date"
+	"io/ioutil"
+	//"log"
 	"net/http"
+	//"context"
 )
 
 type Expense struct {
-	Id          int       `json:"id"`
-	Description string    `json:"description"`
-	Type        string    `json:"type"`
-	Amount      float64   `json:"amount"`
-	CreatedOn   date.Date `json:"created_on" `
-	UpdatedOn   date.Date `json:"updated_on"`
+	Id          float64 `json:"id"`
+	Description string  `json:"description"`
+	Type        string  `json:"type"`
+	Amount      float64 `json:"amount"`
+	//CreatedOn   date.Date `json:"created_on" `
+	//UpdatedOn   date.Date `json:"updated_on"`
 }
 
 type Expenses []Expense
 
-var expenses Expenses
+var (
+	expenses Expenses
+	expense1 Expenses
+)
+
+//var expense = []*Expense{
+//	{Id: 1, Description: "First", Type:"shopping", Amount: 1500.00},
+//	{Id: 2, Description: "Second", Type:"Car", Amount: 1500000.00},
+//}
 
 func main() {
 	r := chi.NewRouter()
@@ -41,7 +56,7 @@ func main() {
 			r.Put("/", UpdateExpense)
 			r.Delete("/", DeleteExpense)
 		})
-	})
+	}) //https://github.com/asahasrabuddhe/go-rest-api.git
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
@@ -61,6 +76,10 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 
 	expense := new(Expense)
 
+	//if val, ok := data["id"].(float64); ok {
+	//	expense.Id = val
+	//}
+
 	if val, ok := data["description"].(string); ok {
 		expense.Description = val
 	}
@@ -71,6 +90,7 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 
 	if val, ok := data["amount"].(float64); ok {
 		expense.Amount = val
+		expense.Id = val + 1
 	}
 
 	expenses = append(expenses, *expense)
@@ -82,7 +102,15 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
+	vars := chi.URLParam(request, "id")
+	key, _ := strconv.Atoi(vars)
 
+	for _, expense := range expenses {
+		if expense.Id == float64(key) {
+			json.NewEncoder(writer).Encode(expense)
+
+		}
+	}
 }
 
 func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
@@ -96,8 +124,58 @@ func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
 
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 
+	////parse the path parameters
+	vars := chi.URLParam(request, "id")
+	//extract the id need to delete
+	id, _ := strconv.Atoi(vars)
+	str, _ := ioutil.ReadAll(request.Body)
+	var expense3 Expense
+	var expense4 Expenses
+	json.Unmarshal(str, &expense3)
+	for index, exp := range expenses {
+		if exp.Id == float64(id) {
+			expense4 = append(expense1[:index], expense3)
+			//json.NewEncoder(w).Encode(s4v)
+			expense4 = append(expense4, expense1[index+1:]...)
+		}
+	}
+	json.NewEncoder(writer).Encode(expense4)
 }
+
+//func dbRemoveExpense(id int) (*Expense,error){
+//		for i, a := range expense {
+//			if a.Id == id {
+//				expense = append((expense)[:i], (expense)[i+1:]...)
+//				return a, nil
+//			}
+//		}
+//		return nil, errors.New("No Expense like this.")
+//	}
+//
+//}
 
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
 
+	//var err error
+	//
+	//article := request.Context.Value("expenses").(*Expenses)
+	//
+	//article ,err = dbRemoveExpense(expenses.id)
+	//if err != nil{
+	//	render.Render(writer, request, ErrInvalidRequest(err))
+	//	return
+	//}
+	//
+	//render.Render(writer, request, v1.NewExpenseResponse(article))
+
+	////parse the path parameters
+	vars := chi.URLParam(request, "id")
+	//extract the id need to delete
+	id, _ := strconv.Atoi(vars)
+
+	for index, expense := range expenses {
+		if expense.Id == float64(id) {
+			expenses = append(expenses[:index], expenses[index+1:]...)
+		}
+	}
 }
