@@ -19,17 +19,20 @@ import (
 )
 
 type Expense struct {
-	Id          float64   `json:"id"`
-	Description string    `json:"description"`
-	Type        string    `json:"type"`
-	Amount      float64   `json:"amount"`
+	Id          float64 `json:"id"`
+	Description string  `json:"description"`
+	Type        string  `json:"type"`
+	Amount      float64 `json:"amount"`
 	//CreatedOn   date.Date `json:"created_on" `
 	//UpdatedOn   date.Date `json:"updated_on"`
 }
 
 type Expenses []Expense
 
-var expenses Expenses
+var (
+	expenses Expenses
+	expense1 Expenses
+)
 
 //var expense = []*Expense{
 //	{Id: 1, Description: "First", Type:"shopping", Amount: 1500.00},
@@ -53,7 +56,7 @@ func main() {
 			r.Put("/", UpdateExpense)
 			r.Delete("/", DeleteExpense)
 		})
-	})//https://github.com/asahasrabuddhe/go-rest-api.git
+	}) //https://github.com/asahasrabuddhe/go-rest-api.git
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
@@ -87,7 +90,7 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 
 	if val, ok := data["amount"].(float64); ok {
 		expense.Amount = val
-		expense.Id = val+1
+		expense.Id = val + 1
 	}
 
 	expenses = append(expenses, *expense)
@@ -99,11 +102,11 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
-	vars := chi.URLParam(request,"id")
+	vars := chi.URLParam(request, "id")
 	key, _ := strconv.Atoi(vars)
 
-	for _, expense := range expenses{
-		if expense.Id == float64(key){
+	for _, expense := range expenses {
+		if expense.Id == float64(key) {
 			json.NewEncoder(writer).Encode(expense)
 
 		}
@@ -121,6 +124,22 @@ func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
 
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 
+	////parse the path parameters
+	vars := chi.URLParam(request, "id")
+	//extract the id need to delete
+	id, _ := strconv.Atoi(vars)
+	str, _ := ioutil.ReadAll(request.Body)
+	var expense3 Expense
+	var expense4 Expenses
+	json.Unmarshal(str, &expense3)
+	for index, exp := range expenses {
+		if exp.Id == float64(id) {
+			expense4 = append(expense1[:index], expense3)
+			//json.NewEncoder(w).Encode(s4v)
+			expense4 = append(expense4, expense1[index+1:]...)
+		}
+	}
+	json.NewEncoder(writer).Encode(expense4)
 }
 
 //func dbRemoveExpense(id int) (*Expense,error){
@@ -150,7 +169,7 @@ func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
 	//render.Render(writer, request, v1.NewExpenseResponse(article))
 
 	////parse the path parameters
-	vars := chi.URLParam(request,"id")
+	vars := chi.URLParam(request, "id")
 	//extract the id need to delete
 	id, _ := strconv.Atoi(vars)
 
