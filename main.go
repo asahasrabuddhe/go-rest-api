@@ -142,4 +142,29 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 }
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
 
+	vars:= chi.URLParam(request,"id")
+	a,err:=strconv.Atoi(vars)
+	flag:=0
+	if err !=nil{
+		http.Error(writer,"ID of the expense not parsed",500)
+	}
+	for index, article := range expenses {
+		if (article.Id==a) {
+			flag=1
+			expenses =append(expenses[:index], expenses[index+1:]...)
+
+			encoder := json.NewEncoder(writer)
+
+			writer.Header().Set("Content-Type", "application/json")
+			writer.WriteHeader(http.StatusOK)
+
+			_ = encoder.Encode(expenses)
+
+		}
+	}
+	if flag==0{
+		http.Error(writer,"expense with ID "+vars+" not found",500)
+	}
+
+
 }
