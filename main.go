@@ -117,5 +117,15 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
+	tempId := chi.URLParam(request, "id")
+	urlId,_ := strconv.Atoi(tempId)
 
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+
+	for key,expense := range(expenses){
+		if expense.Id == urlId {
+			expenses = append(expenses[:key], expenses[key + 1 :]... )
+		}
+	}
 }
