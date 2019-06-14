@@ -3,16 +3,26 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/asahasrabuddhe/rest-api/requests"
-	"github.com/asahasrabuddhe/rest-api/types"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/render"
+	"google.golang.org/genproto/googleapis/type/date"
+	"io/ioutil"
 	"log"
 	"net/http"
 )
 
-var expenses types.Expenses
+type Expense struct {
+	Id          int       `json:"id"`
+	Description string    `json:"description"`
+	Type        string    `json:"type"`
+	Amount      float64   `json:"amount"`
+	CreatedOn   date.Date `json:"created_on" `
+	UpdatedOn   date.Date `json:"updated_on"`
+}
+
+type Expenses []Expense
+
+var expenses Expenses
 
 func main() {
 	r := chi.NewRouter()
@@ -21,7 +31,6 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	r.Route("/expenses", func(r chi.Router) {
 		r.Post("/", CreateExpense)
@@ -38,21 +47,38 @@ func main() {
 }
 
 func CreateExpense(writer http.ResponseWriter, request *http.Request) {
-	var req requests.CreateExpenseRequest
-
-	err := render.Bind(request, &req)
+	b, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Println(err)
-		return
+		http.Error(writer, "unable to read request body", 500)
 	}
 
-	expenses = append(expenses, *req.Expense)
+	var data map[string]interface{}
 
-	j, _ := json.Marshal(req.Expense)
+	err = json.Unmarshal(b, &data)
+	if err != nil {
+		http.Error(writer, "unable to parse json request body", 422)
+	}
+
+	expense := new(Expense)
+
+	if val, ok := data["description"].(string); ok {
+		expense.Description = val
+	}
+
+	if val, ok := data["type"].(string); ok {
+		expense.Type = val
+	}
+
+	if val, ok := data["amount"].(float64); ok {
+		expense.Amount = val
+	}
+
+	expenses = append(expenses, *expense)
+
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusCreated)
 
-	_, _ = fmt.Fprintf(writer, `{"success": true, "data": %v}`, string(j))
+	_, _ = fmt.Fprintln(writer, `{"success": true}`)
 }
 
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
