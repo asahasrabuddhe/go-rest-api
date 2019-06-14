@@ -115,5 +115,18 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
+	listID := chi.URLParam(request, "id")
+	id, err := strconv.Atoi(listID)
+	if err != nil {
+		http.Error(writer, "unable to convert the string value to int", 500)
+	} else {
 
+		for index, expen := range expenses {
+			if expen.Id == id {
+				expenses = append(expenses[:index], expenses[index+1:]...)
+				fmt.Fprintf(writer,"deleted successfully")
+			}
+
+		}
+	}
 }
