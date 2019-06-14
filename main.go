@@ -136,21 +136,14 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 			if val, ok := data["description"].(string); ok {
 				expenses[index].Description = val
 				fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
-			}else{
-				expense.Description = expenses[index].Description
 			}
 			if val, ok := data["type"].(string); ok {
 				expenses[index].Type = val
 				fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
-			}else {
-				expense.Type = expenses[index].Type
 			}
 			if val, ok := data["amount"].(float64); ok {
 				expenses[index].Amount = val
 				fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
-			}else {
-				expense.Amount = expenses[index].Amount
-
 			}
 		}
 
