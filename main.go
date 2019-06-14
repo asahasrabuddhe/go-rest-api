@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Expense struct {
@@ -61,6 +62,12 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 
 	expense := new(Expense)
 
+	fmt.Println(data)
+
+	if val, ok := data["id"].(float64); ok {
+		expense.Id = int(val)
+	}
+
 	if val, ok := data["description"].(string); ok {
 		expense.Description = val
 	}
@@ -82,6 +89,17 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
+	tempId := chi.URLParam(request, "id")
+	urlId,_ := strconv.Atoi(tempId)
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+
+	for _,expense := range(expenses){
+		if expense.Id == urlId {
+			json.NewEncoder(writer).Encode(expense)
+		}
+	}
 
 }
 
