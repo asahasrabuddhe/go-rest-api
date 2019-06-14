@@ -116,9 +116,30 @@ func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
+	vars := chi.URLParam(request, "id")
+	a, err := strconv.Atoi(vars)
+	if err != nil {
+		http.Error(writer, "unable to read request body", 500)
+	}
+	str, _ := ioutil.ReadAll(request.Body)
+	var temp Expense
+	var temp1 Expenses
+	json.Unmarshal(str, &temp)
+	for index, articles := range expenses {
+		if (articles.Id == a) {
+			temp1 = append(expenses[:index], temp)
+			//json.NewEncoder(w).Encode(s4v)
+			temp1 = append(temp1, expenses[index+1:]...)
+		}
+	}
 
+	encoder := json.NewEncoder(writer)
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+
+	_ = encoder.Encode(temp1)
 }
-
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
 
 }
