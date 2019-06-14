@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Expense struct {
@@ -61,6 +62,10 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 
 	expense := new(Expense)
 
+	if val,ok := data["id"].(float64);ok{
+		expense.Id = int(val)
+	}
+
 	if val, ok := data["description"].(string); ok {
 		expense.Description = val
 	}
@@ -82,7 +87,17 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
-
+	listID := chi.URLParam(request , "id")
+	id, err := strconv.Atoi(listID)
+	if err != nil {
+		http.Error(writer,"unable to convert the string value to int",500)
+	} else{
+	for _, expen := range expenses {
+		if expen.Id == id{
+			json.NewEncoder(writer).Encode(expen)
+		}
+	}
+  }
 }
 
 func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
@@ -95,9 +110,59 @@ func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
+	expenseId := chi.URLParam(request, "id")
+	id, err := strconv.Atoi(expenseId)
+	if err != nil {
+		http.Error(writer, "Please enter a valid integer Id", 500)
+	}
 
+	for index, expense := range expenses {
+
+		if expense.Id == id {
+
+			b, err := ioutil.ReadAll(request.Body)
+			if err != nil {
+				http.Error(writer, "unable to read request body", 500)
+			}
+
+			var data map[string]interface{}
+
+			err = json.Unmarshal(b, &data)
+
+			if err != nil {
+				http.Error(writer, "unable to parse json request body", 422)
+			}
+
+			if val, ok := data["description"].(string); ok {
+				expenses[index].Description = val
+				fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
+			}
+			if val, ok := data["type"].(string); ok {
+				expenses[index].Type = val
+				fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
+			}
+			if val, ok := data["amount"].(float64); ok {
+				expenses[index].Amount = val
+				fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
+			}
+		}
+
+	}
 }
 
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
+	listID := chi.URLParam(request, "id")
+	id, err := strconv.Atoi(listID)
+	if err != nil {
+		http.Error(writer, "unable to convert the string value to int", 500)
+	} else {
 
+		for index, expen := range expenses {
+			if expen.Id == id {
+				expenses = append(expenses[:index], expenses[index+1:]...)
+				fmt.Fprintf(writer,"deleted successfully")
+			}
+
+		}
+	}
 }
