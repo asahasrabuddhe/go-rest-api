@@ -102,7 +102,6 @@ func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
 
 func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
 	encoder := json.NewEncoder(writer)
-
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
 
