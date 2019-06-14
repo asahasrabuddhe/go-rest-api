@@ -89,7 +89,6 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
 	expenseId := chi.URLParam(request, "id")
 	id, err := strconv.Atoi(expenseId)
-	fmt.Println(id)
 	if err != nil {
 		http.Error(writer, "Please enter a valid integer Id", 500)
 	}
@@ -113,5 +112,21 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
-
+	expenseId := chi.URLParam(request, "id")
+	id, err := strconv.Atoi(expenseId)
+	if err != nil {
+		http.Error(writer, "Please enter a valid integer Id", 500)
+	}
+	flag := 0
+	for index, expense := range expenses {
+		if expense.Id == id {
+			expenses = append(expenses[:index], expenses[index+1:]...)
+			flag = 1
+		}
+	}
+	if flag == 1{
+		fmt.Fprintln(writer, `{"Expense Deleted successfully": true}`)
+	}else if flag == 0 {
+		fmt.Fprintf(writer, `{"Delete Failed": false}`)
+	}
 }
