@@ -62,11 +62,8 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 
 	expense := new(Expense)
 
-	fmt.Println(data)
 
-	if val, ok := data["id"].(float64); ok {
-		expense.Id = int(val)
-	}
+	expense.Id = len(expenses) + 1
 
 	if val, ok := data["description"].(string); ok {
 		expense.Description = val
@@ -89,14 +86,14 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
-	tempId := chi.URLParam(request, "id")
-	urlId,_ := strconv.Atoi(tempId)
+
+	tempId,_ := strconv.Atoi( chi.URLParam(request, "id") )
 
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
 
 	for _,expense := range(expenses){
-		if expense.Id == urlId {
+		if expense.Id == tempId {
 			json.NewEncoder(writer).Encode(expense)
 		}
 	}
@@ -113,18 +110,60 @@ func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
+	tempId,_ := strconv.Atoi( chi.URLParam(request, "id"))
+
+	for key,expense := range expenses {
+		if expense.Id == tempId {
+			b, err := ioutil.ReadAll(request.Body)
+			if err != nil {
+				http.Error(writer, "unable to read request body", 500)
+			}
+
+			var data map[string]interface{}
+
+			err = json.Unmarshal(b, &data)
+			if err != nil {
+				http.Error(writer, "unable to parse json request body", 422)
+			}
+
+			expense := new(Expense)
+
+			expense.Id = expenses[key].Id
+
+			if val, ok := data["description"].(string); ok {
+				expense.Description = val
+			}else{
+				expense.Description = expenses[key].Description
+			}
+
+			if val, ok := data["type"].(string); ok {
+				expense.Type = val
+			}else{
+				expense.Type = expenses[key].Type
+			}
+
+			if val, ok := data["amount"].(float64); ok {
+				expense.Amount = val
+			}else{
+				expense.Amount = expenses[key].Amount
+			}
+
+			expenses = append(expenses[:key], expenses[key + 1 :]...)
+			expenses = append(expenses, *expense)
+
+		}
+	}
 
 }
 
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
-	tempId := chi.URLParam(request, "id")
-	urlId,_ := strconv.Atoi(tempId)
+	tempId,_ := strconv.Atoi( chi.URLParam(request, "id") )
 
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
 
-	for key,expense := range(expenses){
-		if expense.Id == urlId {
+	for key,expense := range expenses {
+		if expense.Id == tempId {
 			expenses = append(expenses[:key], expenses[key + 1 :]... )
 		}
 	}
