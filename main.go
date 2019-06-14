@@ -108,7 +108,51 @@ func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
+	expenseId := chi.URLParam(request, "id")
+	id, err := strconv.Atoi(expenseId)
+	if err != nil {
+		http.Error(writer, "Please enter a valid integer Id", 500)
+	}
 
+	flag := 0
+	for index, expense := range expenses {
+
+		if expense.Id == id {
+
+			b, err := ioutil.ReadAll(request.Body)
+			if err != nil {
+				http.Error(writer, "unable to read request body", 500)
+			}
+
+			var data map[string]interface{}
+
+			err = json.Unmarshal(b, &data)
+
+			if err != nil {
+				http.Error(writer, "unable to parse json request body", 422)
+			}
+
+			if val, ok := data["id"].(float64); ok {
+				expenses[index].Id = int(val)
+			}
+			if val, ok := data["description"].(string); ok {
+				expenses[index].Description = val
+			}
+			if val, ok := data["type"].(string); ok {
+				expenses[index].Type = val
+			}
+			if val, ok := data["amount"].(float64); ok {
+				expenses[index].Amount = val
+			}
+			flag = 1
+		}
+
+	}
+	if flag == 1{
+		fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
+	}else if flag == 0 {
+		fmt.Fprintf(writer, `{"Update Failed": false}`)
+	}
 }
 
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
