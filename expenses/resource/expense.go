@@ -37,12 +37,19 @@ func (e ExpenseResource) Context(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if id := chi.URLParam(r, "id"); id != "" {
 			if idInt, err := strconv.Atoi(id); err != nil {
-				// error
+				_ = render.Render(w, r, &renderers.ErrorResponse{
+					Err:            err,
+					HTTPStatusCode: 422,
+					StatusText:     "unable to parse id",
+				})
 			} else {
+				logger.LogEntrySetField(r, "id", idInt)
 				for index, expense := range expenses.Exp {
 					if index == idInt {
 						ctx := context.WithValue(r.Context(), "expense", expense)
 						next.ServeHTTP(w, r.WithContext(ctx))
+
+						return
 					}
 				}
 
