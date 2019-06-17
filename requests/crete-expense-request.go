@@ -2,7 +2,7 @@ package requests
 
 import (
 	"errors"
-	"github.com/asahasrabuddhe/rest-api/types"
+	"go-rest-api/types"
 	"net/http"
 )
 

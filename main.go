@@ -105,6 +105,8 @@ func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
 	for _, expense := range expenses{
 		if expense.Id == float64(key){
 			json.NewEncoder(writer).Encode(expense)
+			return//infinte loop
+			//ctrl +I
 
 		}
 	}
