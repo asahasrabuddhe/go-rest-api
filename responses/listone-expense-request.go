@@ -9,6 +9,7 @@ type ListExpenseResponse struct {
 	*types.Expense
 }
 
+
 func (ListExpenseResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
