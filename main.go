@@ -4,21 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
-	"strconv"
-
-	//v1 "github.com/go-chi/chi/_examples/versions/presenter/v1"
 	"github.com/go-chi/chi/middleware"
-	//"github.com/pkg/errors"
-	"log"
-
-	//"google.golang.org/genproto/googleapis/type/date"
+	"google.golang.org/genproto/googleapis/type/date"
 	"io/ioutil"
-	//"log"
+	"log"
 	"net/http"
-	//"context"
+	"strconv"
 )
 
 type Expense struct {
+<<<<<<< HEAD
 <<<<<<< HEAD
 	Id          float64   `json:"id"`
 	Description string    `json:"description"`
@@ -32,6 +27,14 @@ type Expense struct {
 >>>>>>> f784dea5bce3611fd7081e9feee701e0abb382e5
 	//CreatedOn   date.Date `json:"created_on" `
 	//UpdatedOn   date.Date `json:"updated_on"`
+=======
+	Id          int       `json:"id"`
+	Description string    `json:"description"`
+	Type        string    `json:"type"`
+	Amount      float64   `json:"amount"`
+	CreatedOn   date.Date `json:"created_on" `
+	UpdatedOn   date.Date `json:"updated_on"`
+>>>>>>> parent of f2bc428... Done with Delete and Listone and update function
 }
 
 type Expenses []Expense
@@ -40,11 +43,6 @@ var (
 	expenses Expenses
 	expense1 Expenses
 )
-
-//var expense = []*Expense{
-//	{Id: 1, Description: "First", Type:"shopping", Amount: 1500.00},
-//	{Id: 2, Description: "Second", Type:"Car", Amount: 1500000.00},
-//}
 
 //var expense = []*Expense{
 //	{Id: 1, Description: "First", Type:"shopping", Amount: 1500.00},
@@ -69,10 +67,14 @@ func main() {
 			r.Delete("/", DeleteExpense)
 		})
 <<<<<<< HEAD
+<<<<<<< HEAD
 	})//https://github.com/asahasrabuddhe/go-rest-api.git
 =======
 	}) //https://github.com/asahasrabuddhe/go-rest-api.git
 >>>>>>> f784dea5bce3611fd7081e9feee701e0abb382e5
+=======
+	})
+>>>>>>> parent of f2bc428... Done with Delete and Listone and update function
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
@@ -92,10 +94,6 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 
 	expense := new(Expense)
 
-	//if val, ok := data["id"].(float64); ok {
-	//	expense.Id = val
-	//}
-
 	if val, ok := data["description"].(string); ok {
 		expense.Description = val
 	}
@@ -107,10 +105,13 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 	if val, ok := data["amount"].(float64); ok {
 		expense.Amount = val
 <<<<<<< HEAD
+<<<<<<< HEAD
 		expense.Id = val+1
 =======
 		expense.Id = val + 1
 >>>>>>> f784dea5bce3611fd7081e9feee701e0abb382e5
+=======
+>>>>>>> parent of f2bc428... Done with Delete and Listone and update function
 	}
 
 	expenses = append(expenses, *expense)
@@ -122,6 +123,7 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
+<<<<<<< HEAD
 <<<<<<< HEAD
 	vars := chi.URLParam(request,"id")
 	key, _ := strconv.Atoi(vars)
@@ -139,9 +141,9 @@ func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
 		if expense.Id == float64(key) {
 			json.NewEncoder(writer).Encode(expense)
 >>>>>>> f784dea5bce3611fd7081e9feee701e0abb382e5
+=======
+>>>>>>> parent of f2bc428... Done with Delete and Listone and update function
 
-		}
-	}
 }
 
 func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
@@ -173,20 +175,9 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 	json.NewEncoder(writer).Encode(expense4)
 }
 
-//func dbRemoveExpense(id int) (*Expense,error){
-//		for i, a := range expense {
-//			if a.Id == id {
-//				expense = append((expense)[:i], (expense)[i+1:]...)
-//				return a, nil
-//			}
-//		}
-//		return nil, errors.New("No Expense like this.")
-//	}
-//
-//}
-
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
 
+<<<<<<< HEAD
 	//var err error
 	//
 	//article := request.Context.Value("expenses").(*Expenses)
@@ -213,4 +204,6 @@ func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
 			expenses = append(expenses[:index], expenses[index+1:]...)
 		}
 	}
+=======
+>>>>>>> parent of f2bc428... Done with Delete and Listone and update function
 }
