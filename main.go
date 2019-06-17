@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	"go-rest-api/errrs"
 	"go-rest-api/requests"
 	"go-rest-api/responses"
 	"go-rest-api/types"
@@ -12,9 +14,7 @@ import (
 	"net/http"
 	"strconv"
 )
-
 var expenses types.Expenses
-
 
 func main() {
 	r := chi.NewRouter()
@@ -36,44 +36,37 @@ func main() {
 			r.Delete("/", DeleteExpense)
 		})
 	})
-
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 func ArticleCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	//	var e error
+		var err error
+		flag:=1
 		expenseID := chi.URLParam(r, "id")
 		b,_:=strconv.Atoi(expenseID)
 		for _, a := range expenses {
-
 			if a.Id == b {
+				flag=0
 				ctx := context.WithValue(r.Context(), "expense", a )
 				next.ServeHTTP(w, r.WithContext(ctx))
 			}
 		}
-
+		if flag ==1{
+			err=errors.New("ID not Found")
+			render.Render(w, r, errrs.ErrRender(err))
+		}
 	})
 }
-
-
 func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 	var req requests.CreateExpenseRequest
+	var err error
 
-	err := render.Bind(request, &req)
+	err = render.Bind(request, &req)
 	if err != nil {
-		log.Println(err)
+		render.Render(writer,request,errrs.ErrRender(err))
 		return
 	}
-
 	expenses = append(expenses, *req.Expense)
-
-	//j, _ := json.Marshal(req.Expense)
-	//writer.Header().Set("Content-Type", "application/json")
-	//writer.WriteHeader(http.StatusCreated)
-	//
-	//_, _ = fmt.Fprintf(writer, `{"success": true, "data": %v}`, string(j))
-	//render.Status(request, http.StatusCreated)
 	render.Render(writer, request, responses.List1expense(req.Expense))
 }
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
@@ -82,40 +75,42 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 
 	err:= render.Bind(request,&req)
 	if err != nil {
-		log.Println(err)
+		render.Render(writer,request,errrs.ErrRender(err))
 		return
 	}
-// for loop -> get index of expense
 		for index, e := range expenses {
 			if e.Id == expense.Id {
 				expenses[index] = *req.Expense
 			}
 	}
-	//j, _ := json.Marshal(req.Expense)
-	//writer.Header().Set("Content-Type", "application/json")
-	//writer.WriteHeader(http.StatusCreated)
-	//
-	//_, _ = fmt.Fprintf(writer, `{"success": true, "data": %v}`, string(j))
-
-	render.Render(writer, request, responses.List1expense(&expense))
+		errs:=render.Render(writer, request, responses.List1expense(&expense))
+	if errs != nil {
+		render.Render(writer,request,errrs.ErrRender(errs))
+		return
+	}
 }
-
-
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
 	exp := request.Context().Value("expense").(types.Expense)
-	_ = render.Render(writer, request, responses.List1expense(&exp))
+	err:=render.Render(writer, request, responses.List1expense(&exp))
+	if err != nil {
+		render.Render(writer,request,errrs.ErrRender(err))
+		return
+	}
 }
-
-
 func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
-	_ = render.Render(writer, request, responses.NewExpensesResponse(&expenses))
-
+	err := render.Render(writer, request, responses.NewExpensesResponse(&expenses))
+	if err != nil {
+		render.Render(writer,request,errrs.ErrRender(err))
+		return
+	}
 }
-
-
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
 
 	exp := request.Context().Value("expense").(types.Expense)
 	expenses =append(expenses[:exp.Id], expenses[exp.Id+1:]...)
-
+	err:=render.Render(writer,request,responses.NewExpensesResponse(&expenses))
+	if err != nil {
+		render.Render(writer,request,errrs.ErrRender(err))
+		return
+	}
 }
