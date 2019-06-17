@@ -47,9 +47,9 @@ func (e ExpenseResource) Context(next http.Handler) http.Handler {
 				}
 
 				_ = render.Render(w, r, &renderers.ErrorResponse{
-					Err: errors.New("resource not found"),
+					Err:            errors.New("resource not found"),
 					HTTPStatusCode: 404,
-					StatusText: "resource not found",
+					StatusText:     "resource not found",
 				})
 			}
 		}
@@ -81,9 +81,23 @@ func (e ExpenseResource) GetAll(writer http.ResponseWriter, request *http.Reques
 }
 
 func (e ExpenseResource) Update(writer http.ResponseWriter, request *http.Request) {
+	expense := request.Context().Value("expense").(expenses.Expense)
 
+	var req requests.UpdateExpenseRequest
+
+	err := render.Bind(request, &req)
+	if err != nil {
+		logger.LogEntrySetField(request, "error", err)
+		return
+	}
+
+	expenses.Exp[expense.Id-1] = *req.Expense
+
+	_ = render.Render(writer, request, responses.NewExpensesResponse(&expenses.Exp))
 }
 
 func (e ExpenseResource) Delete(writer http.ResponseWriter, request *http.Request) {
+	expense := request.Context().Value("expense").(expenses.Expense)
 
+	expenses.Exp = append(expenses.Exp[:expense.Id], expenses.Exp[expense.Id+1:]...)
 }
