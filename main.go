@@ -95,6 +95,7 @@ func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
 	for _,expense := range(expenses){
 		if expense.Id == tempId {
 			json.NewEncoder(writer).Encode(expense)
+			return
 		}
 	}
 
@@ -165,6 +166,7 @@ func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
 	for key,expense := range expenses {
 		if expense.Id == tempId {
 			expenses = append(expenses[:key], expenses[key + 1 :]... )
+			return
 		}
 	}
 }
