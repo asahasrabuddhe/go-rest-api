@@ -1,29 +1,23 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"google.golang.org/genproto/googleapis/type/date"
-	"io/ioutil"
+	"github.com/go-chi/render"
+	"go-rest-api/errors"
+	"go-rest-api/requests"
+	"go-rest-api/responses"
+	"go-rest-api/types"
 	"log"
 	"net/http"
 	"strconv"
 )
 
-type Expense struct {
-	Id          int       `json:"id"`
-	Description string    `json:"description"`
-	Type        string    `json:"type"`
-	Amount      float64   `json:"amount"`
-	CreatedOn   date.Date `json:"created_on" `
-	UpdatedOn   date.Date `json:"updated_on"`
-}
 
-type Expenses []Expense
-
-var expenses Expenses
+var expenses types.Expenses
 
 func main() {
 	r := chi.NewRouter()
@@ -38,6 +32,7 @@ func main() {
 		r.Get("/", ListAllExpense)
 
 		r.Route("/{id}", func(r chi.Router) {
+			r.Use(ExpenseContext)
 			r.Get("/", ListOneExpense)
 			r.Put("/", UpdateExpense)
 			r.Delete("/", DeleteExpense)
@@ -48,121 +43,85 @@ func main() {
 }
 
 func CreateExpense(writer http.ResponseWriter, request *http.Request) {
-	b, err := ioutil.ReadAll(request.Body)
+	var req requests.CreateExpenseRequest
+
+	err := render.Bind(request, &req)
 	if err != nil {
-		http.Error(writer, "unable to read request body", 500)
+		render.Render(writer, request, errors.ErrInvalidRequest(err))
+		return
 	}
 
-	var data map[string]interface{}
+	expenses = append(expenses, *req.Expense)
 
-	err = json.Unmarshal(b, &data)
-	if err != nil {
-		http.Error(writer, "unable to parse json request body", 422)
-	}
-
-	expense := new(Expense)
-
-	if val,ok := data["id"].(float64);ok{
-		expense.Id = int(val)
-	}
-
-	if val, ok := data["description"].(string); ok {
-		expense.Description = val
-	}
-
-	if val, ok := data["type"].(string); ok {
-		expense.Type = val
-	}
-
-	if val, ok := data["amount"].(float64); ok {
-		expense.Amount = val
-	}
-
-	expenses = append(expenses, *expense)
-
+	j, _ := json.Marshal(req.Expense)
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusCreated)
 
-	_, _ = fmt.Fprintln(writer, `{"success": true}`)
+	_, _ = fmt.Fprintf(writer, `{"success": true, "data": %v}`, string(j))
 }
 
+
+
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
-	listID := chi.URLParam(request , "id")
-	id, err := strconv.Atoi(listID)
-	if err != nil {
-		http.Error(writer,"unable to convert the string value to int",500)
-	} else{
-	for _, expen := range expenses {
-		if expen.Id == id{
-			json.NewEncoder(writer).Encode(expen)
-		}
+	expense := request.Context().Value("expense").(types.Expense)
+	if err := render.Render(writer, request, responses.Listexpense(&expense)) ; err != nil{
+		render.Render(writer,request,errors.ErrRender(err))
+		return
 	}
-  }
 }
 
 func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
-	encoder := json.NewEncoder(writer)
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-
-	_ = encoder.Encode(expenses)
+	if err := render.Render(writer, request, responses.ExpensesResponse(&expenses)); err != nil{
+		render.Render(writer,request,errors.ErrRender(err))
+		return
+	}
 }
+
+func ExpenseContext(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		expenseID := chi.URLParam(r, "id")
+		expid,_:=strconv.Atoi(expenseID)
+		for _, expense := range expenses {
+
+			if expense.Id == expid {
+				ctx := context.WithValue(r.Context(), "expense", expense )
+				next.ServeHTTP(w, r.WithContext(ctx))
+			}
+		}
+
+	})
+}
+
 
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
-	expenseId := chi.URLParam(request, "id")
-	id, err := strconv.Atoi(expenseId)
+
+	expense := request.Context().Value("expense").(types.Expense)
+
+	var req requests.UpdateExpenseRequest
+
+	err := render.Bind(request, &req)
 	if err != nil {
-		http.Error(writer, "Please enter a valid integer Id", 500)
+		render.Render(writer,request,errors.ErrRender(err))
+		return
 	}
+			expenses[expense.Id-1] = *req.Expense
 
-	for index, expense := range expenses {
 
-		if expense.Id == id {
-
-			b, err := ioutil.ReadAll(request.Body)
-			if err != nil {
-				http.Error(writer, "unable to read request body", 500)
-			}
-
-			var data map[string]interface{}
-
-			err = json.Unmarshal(b, &data)
-
-			if err != nil {
-				http.Error(writer, "unable to parse json request body", 422)
-			}
-
-			if val, ok := data["description"].(string); ok {
-				expenses[index].Description = val
-				fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
-			}
-			if val, ok := data["type"].(string); ok {
-				expenses[index].Type = val
-				fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
-			}
-			if val, ok := data["amount"].(float64); ok {
-				expenses[index].Amount = val
-				fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
-			}
-		}
+	if err = render.Render(writer, request, responses.Listexpense(&expense)) ; err != nil{
+			render.Render(writer,request,errors.ErrRender(err))
+			return
 
 	}
 }
 
+
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
-	listID := chi.URLParam(request, "id")
-	id, err := strconv.Atoi(listID)
-	if err != nil {
-		http.Error(writer, "unable to convert the string value to int", 500)
-	} else {
-
-		for index, expen := range expenses {
-			if expen.Id == id {
-				expenses = append(expenses[:index], expenses[index+1:]...)
-				fmt.Fprintf(writer,"deleted successfully")
-			}
-
-		}
+	expense := request.Context().Value("expense").(types.Expense)
+	expenses = append(expenses[:expense.Id-1], expenses[expense.Id:]...)
+	if err := render.Render(writer, request, responses.ExpensesResponse(&expenses)); err != nil{
+		render.Render(writer,request,errors.ErrRender(err))
+		return
 	}
 }
