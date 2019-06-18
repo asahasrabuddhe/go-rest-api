@@ -1,29 +1,23 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"google.golang.org/genproto/googleapis/type/date"
-	"io/ioutil"
+	"github.com/go-chi/render"
+	"go-rest-api/ers"
+	"go-rest-api/requests"
+	"go-rest-api/response"
+	"go-rest-api/types"
 	"log"
 	"net/http"
 	"strconv"
 )
 
-type Expense struct {
-	Id          int       `json:"id"`
-	Description string    `json:"description"`
-	Type        string    `json:"type"`
-	Amount      float64   `json:"amount"`
-	CreatedOn   date.Date `json:"created_on" `
-	UpdatedOn   date.Date `json:"updated_on"`
-}
 
-type Expenses []Expense
-
-var expenses Expenses
+var expenses types.Expenses
 
 func main() {
 	r := chi.NewRouter()
@@ -32,12 +26,15 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(render.SetContentType(render.ContentTypeJSON))
+
 
 	r.Route("/expenses", func(r chi.Router) {
 		r.Post("/", CreateExpense)
 		r.Get("/", ListAllExpense)
 
 		r.Route("/{id}", func(r chi.Router) {
+			r.Use(ExpenseContext)
 			r.Get("/", ListOneExpense)
 			r.Put("/", UpdateExpense)
 			r.Delete("/", DeleteExpense)
@@ -45,132 +42,88 @@ func main() {
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", r))
+
+
 }
 
+func ExpenseContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		expenseID := chi.URLParam(r, "id")
+		id, _:=strconv.Atoi(expenseID)
+		for _, expense := range expenses {
+
+			if expense.Id == id {
+				ctx := context.WithValue(r.Context(), "expense", expense )
+				next.ServeHTTP(w, r.WithContext(ctx))
+			}
+		}
+
+	})
+}
+
+
+
 func CreateExpense(writer http.ResponseWriter, request *http.Request) {
-	b, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		http.Error(writer, "unable to read request body", 500)
+
+	var req requests.CreateExpenseRequest
+
+	err := render.Bind(request, &req)
+	if err!= nil {
+		log.Println(err)
+		return
 	}
-
-	var data map[string]interface{}
-
-	err = json.Unmarshal(b, &data)
-	if err != nil {
-		http.Error(writer, "unable to parse json request body", 422)
+	expenses = append(expenses, *req.Expense)
+	j, err := json.Marshal(req.Expense)
+	if err != nil{
+		render.Render(writer,request,ers.ErrRender(err))
+		return
 	}
-
-	expense := new(Expense)
-
-	if val, ok := data["id"].(float64); ok {
-		expense.Id = int(val)
-	}
-
-	if val, ok := data["description"].(string); ok {
-		expense.Description = val
-	}
-
-	if val, ok := data["type"].(string); ok {
-		expense.Type = val
-	}
-
-	if val, ok := data["amount"].(float64); ok {
-		expense.Amount = val
-	}
-
-	expenses = append(expenses, *expense)
 
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusCreated)
 
-	_, _ = fmt.Fprintln(writer, `{"success": true}`)
+	_, _ = fmt.Fprintf(writer, `{"success": true, "data": %v}`, string(j))
 }
-
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
-	expenseId := chi.URLParam(request, "id")
-	id, err := strconv.Atoi(expenseId)
-	if err != nil {
-		http.Error(writer, "Please enter a valid integer Id", 500)
-	}
-	for _, expense := range expenses {
-		if expense.Id == id {
-			json.NewEncoder(writer).Encode(expense)
-		}
+	expense := request.Context().Value("expense").(types.Expense)
+	err := render.Render(writer, request, response.Listexpense(&expense))
+	if err != nil{
+		render.Render(writer,request,ers.ErrRender(err))
+		return
 	}
 }
 
 func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
-	encoder := json.NewEncoder(writer)
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-
-	_ = encoder.Encode(expenses)
+	err := render.Render(writer, request, response.ExpensesResponse(&expenses))
+	if err != nil{
+		render.Render(writer,request,ers.ErrRender(err))
+		return
+	}
 }
 
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
-	expenseId := chi.URLParam(request, "id")
-	id, err := strconv.Atoi(expenseId)
+
+	expense := request.Context().Value("expense").(types.Expense)
+
+	var req requests.UpdateExpenseRequest
+
+	err := render.Bind(request, &req)
 	if err != nil {
-		http.Error(writer, "Please enter a valid integer Id", 500)
+		log.Println(err)
+		return
 	}
+	expenses[expense.Id-1] = *req.Expense
 
-	flag := 0
-	for index, expense := range expenses {
 
-		if expense.Id == id {
-
-			b, err := ioutil.ReadAll(request.Body)
-			if err != nil {
-				http.Error(writer, "unable to read request body", 500)
-			}
-
-			var data map[string]interface{}
-
-			err = json.Unmarshal(b, &data)
-
-			if err != nil {
-				http.Error(writer, "unable to parse json request body", 422)
-			}
-
-			if val, ok := data["id"].(float64); ok {
-				expenses[index].Id = int(val)
-			}
-			if val, ok := data["description"].(string); ok {
-				expenses[index].Description = val
-			}
-			if val, ok := data["type"].(string); ok {
-				expenses[index].Type = val
-			}
-			if val, ok := data["amount"].(float64); ok {
-				expenses[index].Amount = val
-			}
-			flag = 1
-		}
-
-	}
-	if flag == 1{
-		fmt.Fprintln(writer, `{"Expense Updated successfully": true}`)
-	}else if flag == 0 {
-		fmt.Fprintf(writer, `{"Update Failed": false}`)
+	err = render.Render(writer, request, response.Listexpense(&expense))
+	if err != nil{
+		render.Render(writer,request,ers.ErrRender(err))
+		return
 	}
 }
 
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
-	expenseId := chi.URLParam(request, "id")
-	id, err := strconv.Atoi(expenseId)
-	if err != nil {
-		http.Error(writer, "Please enter a valid integer Id", 500)
-	}
-	flag := 0
-	for index, expense := range expenses {
-		if expense.Id == id {
-			expenses = append(expenses[:index], expenses[index+1:]...)
-			flag = 1
-		}
-	}
-	if flag == 1{
-		fmt.Fprintln(writer, `{"Expense Deleted successfully": true}`)
-	}else if flag == 0 {
-		fmt.Fprintf(writer, `{"Delete Failed": false}`)
-	}
+	expense := request.Context().Value("expense").(types.Expense)
+	expenses = append(expenses[:expense.Id-1], expenses[expense.Id:]...)
 }
