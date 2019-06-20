@@ -1,7 +1,6 @@
 package responses
 
 import (
-	"errors"
 	"go-rest-api/types"
 	"net/http"
 )
@@ -17,5 +16,5 @@ func NewExpensesResponse(expenses *types.Expenses) *ExpensesResponse{
 
 func (e *ExpensesResponse) Render(w http.ResponseWriter, r *http.Request) error {
 
-	return errors.New("Error at listing  Expenses")
+	return nil
 }
