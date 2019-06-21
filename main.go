@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/render"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
+	"go-rest-api/Interfaces"
 	"go-rest-api/errrs"
 	"go-rest-api/requests"
 	"go-rest-api/responses"
@@ -17,22 +18,32 @@ import (
 	"net/http"
 	"time"
 )
-var db *gorm.DB
+
+type Mysql struct {
+	Db *gorm.DB
+
+}
 var expenses types.Expenses
 var temp types.Expense
 var req requests.CreateExpenseRequest
 var err error
+var connstr = "root:root@tcp(127.0.0.1:3306)/Expense?charset=utf8&parseTime=True"
+var db1 Interfaces.Databases
 func main() {
-	db, err = gorm.Open("mysql", "root:root@tcp(127.0.0.1:3306)/Expense?charset=utf8&parseTime=True")
-	defer db.Close()
+
+	db,err := gorm.Open("mysql", connstr)
 	if err != nil {
 		fmt.Println(err)
-	}else{
-		fmt.Println("Connection established")
 	}
-	if(!db.HasTable(&types.Expense{}) ) {
+	if (!db.HasTable(&types.Expense{})) {
 		db.AutoMigrate(&types.Expense{})
 	}
+	set:=&Mysql{db}
+	handlerequest(set)
+
+
+}
+func handlerequest(db1 Interfaces.Databases){
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -41,58 +52,45 @@ func main() {
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	r.Route("/expenses", func(r chi.Router) {
-		r.Post("/", CreateExpense)
-		r.Get("/", ListAllExpense)
+		r.Post("/", db1.Create)
+		r.Get("/", db1.GetAll)
 
 		r.Route("/{id}", func(r chi.Router) {
-			r.Use(ArticleCtx)
-			r.Get("/", ListOneExpense)
-			r.Put("/", UpdateExpense)
-			r.Delete("/", DeleteExpense)
+			r.Use(db1.ArticleCtx)
+			r.Get("/", db1.GetId)
+			r.Put("/", db1.Update)
+			r.Delete("/", db1.Delete)
 		})
 	})
 	log.Fatal(http.ListenAndServe(":8080", r))
+
 }
-func ArticleCtx(next http.Handler) http.Handler {
+func (db *Mysql)ArticleCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		expenseID := chi.URLParam(r, "id")
-
-		db, err = gorm.Open("mysql", "root:root@tcp(127.0.0.1:3306)/Expense?charset=utf8&parseTime=True")
-		if err != nil {
-			fmt.Println(err)
-		}else{
-			fmt.Println("Connection established")
-		}
 		var temp types.Expense
-		Db:= db.Table("expenses").Where("id = ?", expenseID).Find(&temp)
+		Db:= db.Db.Table("expenses").Where("id = ?", expenseID).Find(&temp)
 
 		if Db.RowsAffected == 0{
 			err=errors.New("ID not Found")
 			render.Render(w, r, errrs.ErrRender(err))
 			return
 		} else{
-			ctx := context.WithValue(r.Context(), "expense", Db )
+			ctx := context.WithValue(r.Context(), "expense", Db)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	})
 }
-func CreateExpense(writer http.ResponseWriter, request *http.Request) {
+func (db *Mysql)Create(writer http.ResponseWriter, request *http.Request) {
 	err = render.Bind(request, &req)
-	db, err = gorm.Open("mysql", "root:root@tcp(127.0.0.1:3306)/Expense?charset=utf8&parseTime=True")
-	defer db.Close()
-	if err != nil {
-		fmt.Println(err)
-	}else{
-		fmt.Println("Connection established")
-	}
 	temp:=*req.Expense
 	temp.CreatedOn=time.Now()
 	temp.UpdatedOn=time.Now()
-	db.Create(&temp)
+	db.Db.Create(&temp)
 	render.Render(writer, request, responses.List1expense(req.Expense))
 }
-func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
-	db := request.Context().Value("expense").(*gorm.DB)
+func (db *Mysql)Update(writer http.ResponseWriter, request *http.Request) {
+	db.Db = request.Context().Value("expense").(*gorm.DB)
 	err:= render.Bind(request,&req)
 	if err != nil {
 		render.Render(writer,request,errrs.ErrRender(err))
@@ -100,8 +98,8 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 	}
 	temp:=*req.Expense
 	temp.UpdatedOn=time.Now()
-	Db:= db.Update(&temp)
-			if(Db.RowsAffected == 0){
+	dB:= db.Db.Update(&temp)
+			if(dB.RowsAffected == 0){
 				err:=errors.New("Expense not found")
 				render.Render(writer,request,errrs.ErrRender(err))
 				return
@@ -109,10 +107,10 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 				_=render.Render(writer, request, responses.List1expense(&temp))
 			}
 }
-func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
-	db := request.Context().Value("expense").(*gorm.DB)
-	Db:= db.Find(&temp)
-	if(Db.RowsAffected == 0){
+func (db *Mysql) GetId(writer http.ResponseWriter, request *http.Request) {
+	db.Db = request.Context().Value("expense").(*gorm.DB)
+	dB:=db.Db.Find(&temp)
+	if(dB.RowsAffected == 0){
 		err:=errors.New("Expense not found")
 		render.Render(writer,request,errrs.ErrRender(err))
 		return
@@ -120,25 +118,18 @@ func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
 		_=render.Render(writer, request, responses.List1expense(&temp))
 	}
 }
-func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
-	db, err = gorm.Open("mysql", "root:root@tcp(127.0.0.1:3306)/Expense?charset=utf8&parseTime=True")
-	defer db.Close()
-	if err != nil {
-		fmt.Println(err)
-	}else{
-		fmt.Println("Connection established")
-	}
-	db.Find(&expenses)
+func (db *Mysql) GetAll(writer http.ResponseWriter, request *http.Request) {
+	db.Db.Find(&expenses)
 	err = render.Render(writer, request, responses.NewExpensesResponse(&expenses))
 	if err != nil {
 		render.Render(writer,request,errrs.ErrRender(err))
 		return
 	}
 }
-func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
-	db := request.Context().Value("expense").(*gorm.DB)
-	Db:= db.Delete(&temp)
-	if(Db.RowsAffected == 0){
+func (db *Mysql)Delete(writer http.ResponseWriter, request *http.Request) {
+	db.Db = request.Context().Value("expense").(*gorm.DB)
+	dB:= db.Db.Delete(&temp)
+	if(dB.RowsAffected == 0){
 		err:=errors.New("Expense not found")
 		render.Render(writer,request,errrs.ErrRender(err))
 		return
