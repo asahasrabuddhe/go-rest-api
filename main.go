@@ -8,19 +8,27 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"go-rest-api/errors"
+	"go-rest-api/expenseDB"
 	"go-rest-api/requests"
 	"go-rest-api/responses"
 	"go-rest-api/types"
+	"go.mongodb.org/mongo-driver/bson"
 	"log"
 	"net/http"
 	"strconv"
 )
 
 
+
 var expenses types.Expenses
+
+var mh *expenseDB.MongoHandler
 
 func main() {
 	r := chi.NewRouter()
+
+	mongoDbConnection := "mongodb://localhost:27017"
+	mh = expenseDB.NewHandler(mongoDbConnection)
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -30,6 +38,7 @@ func main() {
 	r.Route("/expenses", func(r chi.Router) {
 		r.Post("/", CreateExpense)
 		r.Get("/", ListAllExpense)
+		//r.Put("/{id}",UpdateExpense)
 
 		r.Route("/{id}", func(r chi.Router) {
 			r.Use(ExpenseContext)
@@ -38,7 +47,6 @@ func main() {
 			r.Delete("/", DeleteExpense)
 		})
 	})
-
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
@@ -51,7 +59,12 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	expenses = append(expenses, *req.Expense)
+
+	//expenses = append(expenses, *req.Expense)
+	_,err =mh.AddOne(req.Expense)
+	if err!= nil{
+		log.Println(err)
+	}
 
 	j, _ := json.Marshal(req.Expense)
 	writer.Header().Set("Content-Type", "application/json")
@@ -62,42 +75,46 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 
 
 
+
+
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
-	expense := request.Context().Value("expense").(types.Expense)
-	if err := render.Render(writer, request, responses.Listexpense(&expense)) ; err != nil{
+	expense := request.Context().Value("expense").(*types.Expense)
+	err := render.Render(writer, request, responses.Listexpense(expense))
+	if err != nil{
+		log.Println(err)
 		render.Render(writer,request,errors.ErrRender(err))
 		return
 	}
 }
 
 func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
-	if err := render.Render(writer, request, responses.ExpensesResponse(&expenses)); err != nil{
+	expenses := mh.Get(bson.M{})
+	if err := render.Render(writer, request, responses.ExpensesResponse(expenses)); err != nil{
 		render.Render(writer,request,errors.ErrRender(err))
 		return
 	}
 }
 
 func ExpenseContext(next http.Handler) http.Handler {
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		expenseID := chi.URLParam(r, "id")
-		expid,_:=strconv.Atoi(expenseID)
-		for _, expense := range expenses {
+		id, _:=strconv.Atoi(expenseID)
 
-			if expense.Id == expid {
-				ctx := context.WithValue(r.Context(), "expense", expense )
-				next.ServeHTTP(w, r.WithContext(ctx))
-			}
+		expense := &types.Expense{}
+		err := mh.GetOne(expense, bson.M{"id":id})
+		if err !=nil{
+			log.Println(err)
 		}
-
+		ctx := context.WithValue(r.Context(), "expense", expense )
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 
-	expense := request.Context().Value("expense").(types.Expense)
+	expense := request.Context().Value("expense").(*types.Expense)
 
 	var req requests.UpdateExpenseRequest
 
@@ -106,22 +123,28 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 		render.Render(writer,request,errors.ErrRender(err))
 		return
 	}
-			expenses[expense.Id-1] = *req.Expense
 
+	_, err = mh.Update(bson.D{{"id",expense.Id}},req.Expense)
+	if err!=nil{
+		log.Println(err)
+	}
+	//expenses[expense.Id-1] = *req.Expense
+    _=mh.GetOne(expense,bson.M{"id":expense.Id})
 
-	if err = render.Render(writer, request, responses.Listexpense(&expense)) ; err != nil{
-			render.Render(writer,request,errors.ErrRender(err))
-			return
+	if err = render.Render(writer, request, responses.Listexpense(expense)) ; err != nil{
+		render.Render(writer,request,errors.ErrRender(err))
+		return
 
 	}
 }
 
 
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
-	expense := request.Context().Value("expense").(types.Expense)
-	expenses = append(expenses[:expense.Id-1], expenses[expense.Id:]...)
-	if err := render.Render(writer, request, responses.ExpensesResponse(&expenses)); err != nil{
-		render.Render(writer,request,errors.ErrRender(err))
+	expense := request.Context().Value("expense").(*types.Expense)
+	_, err := mh.RemoveOne(bson.D{{"id", expense.Id}})
+	if err!=nil{
+		log.Println(err)
 		return
 	}
+
 }

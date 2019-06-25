@@ -6,10 +6,10 @@ import (
 )
 
 type ListExpensesResponse struct {
-	Expenses *types.Expenses
+	Expenses []*types.Expense
 }
 
-func ExpensesResponse(expenses *types.Expenses) *ListExpensesResponse {
+func ExpensesResponse(expenses []*types.Expense) *ListExpensesResponse {
 	resp := &ListExpensesResponse{Expenses: expenses}
 	return resp
 }
