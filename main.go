@@ -16,6 +16,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 
@@ -61,6 +62,8 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 
 
 	//expenses = append(expenses, *req.Expense)
+
+	req.Expense.CreatedOn=time.Now()
 	_,err =mh.AddOne(req.Expense)
 	if err!= nil{
 		log.Println(err)
@@ -124,10 +127,13 @@ func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	req.Expense.CreatedOn = expense.CreatedOn
+	req.Expense.UpdatedOn=time.Now()
 	_, err = mh.Update(bson.D{{"id",expense.Id}},req.Expense)
 	if err!=nil{
 		log.Println(err)
 	}
+
 	//expenses[expense.Id-1] = *req.Expense
     _=mh.GetOne(expense,bson.M{"id":expense.Id})
 

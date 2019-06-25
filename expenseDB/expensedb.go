@@ -60,10 +60,10 @@ func (mh *MongoHandler) Get(filter interface{}) []*types.Expense {
 	return result
 }
 
-func (mh *MongoHandler) AddOne(c *types.Expense) (*mongo.InsertOneResult, error) {
+func (mh *MongoHandler) AddOne(exp *types.Expense) (*mongo.InsertOneResult, error) {
 	collection := mh.client.Database(mh.database).Collection("expensecoll")
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	result, err := collection.InsertOne(ctx, c)
+	result, err := collection.InsertOne(ctx, exp)
 	return result, err
 }
 
