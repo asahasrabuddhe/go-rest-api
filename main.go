@@ -16,6 +16,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 var expenses types.Expenses
@@ -55,7 +56,6 @@ func ExpenseContext(next http.Handler) http.Handler {
 
 		expenseID := chi.URLParam(r, "id")
 		id, _ := strconv.Atoi(expenseID)
-
 		expense := &types.Expense{}
 		err := mh.GetOne(expense, bson.M{"id": id})
 		if err != nil {
@@ -67,14 +67,13 @@ func ExpenseContext(next http.Handler) http.Handler {
 }
 
 func CreateExpense(writer http.ResponseWriter, request *http.Request) {
-
 	var req requests.CreateExpenseRequest
-
 	err := render.Bind(request, &req)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	req.Expense.CreatedOn = time.Now()
 	_, err = mh.AddOne(req.Expense)
 	if err != nil {
 		log.Println(err)
@@ -85,12 +84,11 @@ func CreateExpense(writer http.ResponseWriter, request *http.Request) {
 		_ = render.Render(writer, request, ers.ErrRender(err))
 		return
 	}
-
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusCreated)
-
 	_, _ = fmt.Fprintf(writer, `{"success": true, "data": %v}`, string(j))
 }
+
 func ListOneExpense(writer http.ResponseWriter, request *http.Request) {
 	expense := request.Context().Value("expense").(*types.Expense)
 	err := render.Render(writer, request, response.Listexpense(expense))
@@ -107,30 +105,26 @@ func ListAllExpense(writer http.ResponseWriter, request *http.Request) {
 }
 
 func UpdateExpense(writer http.ResponseWriter, request *http.Request) {
-
 	expense := request.Context().Value("expense").(*types.Expense)
-
 	var req requests.UpdateExpenseRequest
-
 	err := render.Bind(request, &req)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	req.Expense.CreatedOn = expense.CreatedOn
+	req.Expense.UpdatedOn = time.Now()
 	_, err = mh.Update(bson.M{"id": expense.Id}, *req.Expense)
 	if err != nil {
 		log.Println(err)
 	}
-
 	_ = mh.GetOne(expense, bson.M{"id": expense.Id})
-
 	err = render.Render(writer, request, response.Listexpense(expense))
 	if err != nil {
 		_ = render.Render(writer, request, ers.ErrRender(err))
 		return
 	}
 }
-
 func DeleteExpense(writer http.ResponseWriter, request *http.Request) {
 	expense := request.Context().Value("expense").(*types.Expense)
 	_, err := mh.RemoveOne(bson.M{"id": expense.Id})
