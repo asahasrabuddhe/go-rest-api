@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
@@ -21,27 +20,24 @@ import (
 
 type Mysql struct {
 	Db *gorm.DB
-
 }
 var expenses types.Expenses
 var temp types.Expense
 var req requests.CreateExpenseRequest
 var err error
-var connstr = "root:root@tcp(127.0.0.1:3306)/Expense?charset=utf8&parseTime=True"
 var db1 Interfaces.Databases
+
+
 func main() {
-
-	db,err := gorm.Open("mysql", connstr)
+	db, err := gorm.Open("mysql", "root:root@tcp(localhost:3306)/Expense?charset=utf8&parseTime=True")
 	if err != nil {
-		fmt.Println(err)
-	}
-	if (!db.HasTable(&types.Expense{})) {
-		db.AutoMigrate(&types.Expense{})
-	}
-	set:=&Mysql{db}
-	handlerequest(set)
 
-
+		if (!db.HasTable(&types.Expense{})) {
+			db.AutoMigrate(&types.Expense{})
+		}
+		set := &Mysql{db}
+		handlerequest(set)
+	}
 }
 func handlerequest(db1 Interfaces.Databases){
 	r := chi.NewRouter()
@@ -100,7 +96,7 @@ func (db *Mysql)Update(writer http.ResponseWriter, request *http.Request) {
 	temp.UpdatedOn=time.Now()
 	dB:= db.Db.Update(&temp)
 			if(dB.RowsAffected == 0){
-				err:=errors.New("Expense not found")
+				err:=errors.New("unable to update")
 				render.Render(writer,request,errrs.ErrRender(err))
 				return
 			}else{
@@ -130,7 +126,7 @@ func (db *Mysql)Delete(writer http.ResponseWriter, request *http.Request) {
 	db.Db = request.Context().Value("expense").(*gorm.DB)
 	dB:= db.Db.Delete(&temp)
 	if(dB.RowsAffected == 0){
-		err:=errors.New("Expense not found")
+		err:=errors.New("unable to delete")
 		render.Render(writer,request,errrs.ErrRender(err))
 		return
 	}else{

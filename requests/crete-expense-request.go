@@ -11,6 +11,10 @@ type CreateExpenseRequest struct {
 }
 
 func (c *CreateExpenseRequest) Bind(r *http.Request) error {
+	return nil
+}
+
+func (c *CreateExpenseRequest) yBind(r *http.Request) error {
 	if c.Description == "" {
 		return errors.New("description is either empty or invalid")
 	}
