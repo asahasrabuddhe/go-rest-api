@@ -1,0 +1,9 @@
+version: '2'
+services:
+  microservices :
+    build: .
+    image: ayushcloud
+    environment:
+      - 'PORT 9090'
+    ports:
+      - "9090:9090"
