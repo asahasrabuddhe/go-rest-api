@@ -29,15 +29,20 @@ var db1 Interfaces.Databases
 
 
 func main() {
-	db, err := gorm.Open("mysql", "root:root@tcp(localhost:3306)/Expense?charset=utf8&parseTime=True")
-	if err != nil {
 
+	dba, err := gorm.Open("mysql", "root:root@tcp(localhost:3306)/")
+	dba.Exec("CREATE DATABASE IF NOT EXISTS"+" Expense1")
+	dba.Close()
+
+	db, err := gorm.Open("mysql", "root:root@tcp(localhost:3306)/Expense1?charset=utf8&parseTime=True")
+
+	if err != nil {
 		if (!db.HasTable(&types.Expense{})) {
 			db.AutoMigrate(&types.Expense{})
-		}
+		}}
 		set := &Mysql{db}
 		handlerequest(set)
-	}
+
 }
 func handlerequest(db1 Interfaces.Databases){
 	r := chi.NewRouter()
