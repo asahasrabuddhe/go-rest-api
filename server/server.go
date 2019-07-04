@@ -12,7 +12,7 @@ import (
 var r chi.Router
 var log *logrus.Logger
 
-func Initialize() {
+func init() {
 	log = logrus.New()
 
 	log.SetFormatter(&logrus.JSONFormatter{
@@ -22,12 +22,10 @@ func Initialize() {
 
 	r = chi.NewRouter()
 
-	compressor := middleware.NewCompressor(1)
-
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(logger.NewStructuredLogger(log))
-	r.Use(compressor.Handler())
+	r.Use(middleware.Compress(1))
 	r.Use(middleware.AllowContentType("application/json"))
 	r.Use(middleware.SetHeader("Content-Type", "application/json"))
 	r.Use(middleware.Recoverer)
@@ -40,4 +38,12 @@ func Mount(pattern string, router chi.Router) {
 
 func Serve() {
 	log.Fatal(http.ListenAndServe(":8080", r))
+}
+
+func AddLogHook(hook logrus.Hook) {
+	log.AddHook(hook)
+}
+
+func ReplaceLogHook(hooks logrus.LevelHooks) logrus.LevelHooks {
+	return log.ReplaceHooks(hooks)
 }

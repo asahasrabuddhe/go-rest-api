@@ -1,0 +1,39 @@
+package {{ .PackageName }}
+
+import (
+    "net/http"
+)
+
+type Response struct {
+    {{ .TypeName }} *{{ .TypeName }} `json:"data"`
+    Success bool `json:"success"`
+}
+
+func New{{ .TypeName }}Response({{ lc .TypeName }} *{{ .TypeName }}) *Response {
+    return &Response{ {{ .TypeName }}: {{ lc .TypeName }} }
+}
+
+func ({{ .PackageReceiver }} *Response) Render(w http.ResponseWriter, r *http.Request) error {
+    if {{ .PackageReceiver }}.{{ .TypeName }} != nil {
+        {{ .PackageReceiver }}.Success = true
+    }
+
+    return nil
+}
+
+type ListResponse struct {
+    {{ .TypeNamePlural }} *{{ .TypeNamePlural }} `json:"data"`
+    Success bool `json:"success"`
+}
+
+func New{{ .TypeNamePlural }}Response({{ lc .TypeNamePlural }} *{{ .TypeNamePlural }}) *ListResponse {
+    return &ListResponse{ {{ .TypeNamePlural }}: {{ lc .TypeNamePlural }} }
+}
+
+func ({{ .PackageReceiver }} *ListResponse) Render(w http.ResponseWriter, r *http.Request) error {
+    if {{ .PackageReceiver }}.{{ .TypeNamePlural }} != nil {
+        {{ .PackageReceiver }}.Success = true
+    }
+
+    return nil
+}

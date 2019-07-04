@@ -1,16 +1,15 @@
-package requests
+package expenses
 
 import (
 	"errors"
-	"github.com/asahasrabuddhe/rest-api/expenses"
 	"net/http"
 )
 
-type CreateExpenseRequest struct {
-	*expenses.Expense
+type Create struct {
+	*Expense
 }
 
-func (c *CreateExpenseRequest) Bind(r *http.Request) error {
+func (c *Create) Bind(r *http.Request) error {
 	if c.Description == "" {
 		return errors.New("description is either empty or invalid")
 	}
@@ -24,4 +23,16 @@ func (c *CreateExpenseRequest) Bind(r *http.Request) error {
 	}
 
 	return nil
+}
+
+type Update struct {
+	*Create
+}
+
+func (u *Update) Bind(r *http.Request) error {
+	if u.Id == 0 {
+		return errors.New("id is empty or invalid")
+	}
+
+	return u.Create.Bind(r)
 }

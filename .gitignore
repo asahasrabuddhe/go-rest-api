@@ -1,1 +1,7 @@
 .idea
+vendor
+api-gen/vendor
+api-gen/packrd
+api-gen/*-packr.go
+
+

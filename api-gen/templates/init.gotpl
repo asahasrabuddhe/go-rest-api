@@ -1,0 +1,9 @@
+package {{ .PackageName }}
+
+import (
+    "github.com/asahasrabuddhe/rest-api/server"
+)
+
+func init() {
+    server.Mount("/{{ .PackageName }}", Resource{}.Routes())
+}
