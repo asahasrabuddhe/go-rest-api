@@ -1,3 +1,6 @@
 .idea
 .idea/*
 vendor/*
+Gopkg.lock
+Gopkg.toml
+_vendor-20190722155142/

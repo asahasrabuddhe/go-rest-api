@@ -29,8 +29,6 @@ type MongoHandler struct {
 
 //MongoHandler Constructor
 func NewHandler(address string) *MongoHandler {
-	//mongoDbConnection := "mongodb://localhost:27017"
-	//mh := NewHandler(mongoDbConnection)
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	cl, _ := mongo.Connect(ctx, options.Client().ApplyURI(address))
 	mh := &MongoHandler{
