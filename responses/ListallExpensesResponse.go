@@ -6,11 +6,11 @@ import (
 )
 
 type ExpensesResponse struct {
-  Expenses *types.Expenses
+ *types.Expenses
 }
 
 func NewExpensesResponse(expenses *types.Expenses) *ExpensesResponse{
-	return &ExpensesResponse{Expenses: expenses}
+	return &ExpensesResponse{ expenses}
 
 }
 

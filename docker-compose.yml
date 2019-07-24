@@ -1,9 +1,41 @@
-version: '2'
+version: "2.1"
 services:
-  microservices :
+  microservices:
     build: .
     image: ayushcloud
-    environment:
-      - 'PORT 9090'
+    # environment: 
+    #   - "PORT 9090"
     ports:
-      - "9090:9090"
+      - '8080:8080'
+    # networks: 
+    #   -  micronetwork
+    depends_on:
+      db:
+        condition: service_healthy
+    links: 
+      - db
+    # volumes:
+    #   - "/var/run/docker.sock:/var/run/docker.sock" 
+  db:
+    image: mysql
+    # restart: always
+    # container_name: dbsql.dev 
+    # hostname: dbsql.dev
+    container_name: cloudserver
+
+    environment: 
+      - 'MYSQL_ROOT_PASSWORD=root'
+      - 'MYSQL_DATABASE=Expense1'
+    # volumes:
+    #   - "/var/run/docker.sock:/var/run/docker.sock" 
+    # networks:
+    #   - micronetwork 
+    ports: 
+      - '3306:3306'  
+    healthcheck:
+            test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+            timeout: 20s
+            retries: 2 
+# networks: 
+#   micronetwork:
+#     driver: bridge

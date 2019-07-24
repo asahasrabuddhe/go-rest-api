@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
@@ -21,28 +22,24 @@ import (
 type Mysql struct {
 	Db *gorm.DB
 }
-var expenses types.Expenses
-var temp types.Expense
-var req requests.CreateExpenseRequest
 var err error
 var db1 Interfaces.Databases
-
-
 func main() {
 
-	dba, err := gorm.Open("mysql", "root:root@tcp(localhost:3306)/")
+	dba, err := gorm.Open("mysql", "root:root@tcp(127.0.0.1:3306)/")
 	dba.Exec("CREATE DATABASE IF NOT EXISTS"+" Expense1")
 	dba.Close()
 
-	db, err := gorm.Open("mysql", "root:root@tcp(localhost:3306)/Expense1?charset=utf8&parseTime=True")
+	db, err := gorm.Open("mysql", "root:root@tcp(127.0.0.1:3306)/Expense1?charset=utf8&parseTime=True")
 
 	if err != nil {
+		fmt.Println(err)
+	}
 		if (!db.HasTable(&types.Expense{})) {
 			db.AutoMigrate(&types.Expense{})
-		}}
+		}
 		set := &Mysql{db}
 		handlerequest(set)
-
 }
 func handlerequest(db1 Interfaces.Databases){
 	r := chi.NewRouter()
@@ -68,73 +65,71 @@ func handlerequest(db1 Interfaces.Databases){
 }
 func (db *Mysql)ArticleCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		expenseID := chi.URLParam(r, "id")
 		var temp types.Expense
-		Db:= db.Db.Table("expenses").Where("id = ?", expenseID).Find(&temp)
-
-		if Db.RowsAffected == 0{
+		expenseID := chi.URLParam(r, "id")
+		DB:= db.Db.Table("expenses").Where("id = ?", expenseID).Find(&temp)
+		fmt.Println(temp)
+		if DB.RowsAffected == 0{
 			err=errors.New("ID not Found")
 			render.Render(w, r, errrs.ErrRender(err))
 			return
 		} else{
-			ctx := context.WithValue(r.Context(), "expense", Db)
+			ctx := context.WithValue(r.Context(), "expense", temp)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	})
 }
 func (db *Mysql)Create(writer http.ResponseWriter, request *http.Request) {
+	var req requests.CreateExpenseRequest
 	err = render.Bind(request, &req)
 	temp:=*req.Expense
 	temp.CreatedOn=time.Now()
 	temp.UpdatedOn=time.Now()
 	db.Db.Create(&temp)
-	render.Render(writer, request, responses.List1expense(req.Expense))
+	render.Render(writer, request, responses.List1expense(&temp))
 }
 func (db *Mysql)Update(writer http.ResponseWriter, request *http.Request) {
-	db.Db = request.Context().Value("expense").(*gorm.DB)
+	var req requests.UpdateExpenseRequest
+	expe:= request.Context().Value("expense").(types.Expense)
 	err:= render.Bind(request,&req)
 	if err != nil {
 		render.Render(writer,request,errrs.ErrRender(err))
 		return
 	}
-	temp:=*req.Expense
-	temp.UpdatedOn=time.Now()
-	dB:= db.Db.Update(&temp)
+	expe=*req.Expense
+	expe.UpdatedOn=time.Now()
+	dB:= db.Db.Update(&expe)
 			if(dB.RowsAffected == 0){
 				err:=errors.New("unable to update")
 				render.Render(writer,request,errrs.ErrRender(err))
 				return
 			}else{
-				_=render.Render(writer, request, responses.List1expense(&temp))
+				_=render.Render(writer, request, responses.List1expense(&expe))
 			}
 }
 func (db *Mysql) GetId(writer http.ResponseWriter, request *http.Request) {
-	db.Db = request.Context().Value("expense").(*gorm.DB)
-	dB:=db.Db.Find(&temp)
-	if(dB.RowsAffected == 0){
-		err:=errors.New("Expense not found")
-		render.Render(writer,request,errrs.ErrRender(err))
-		return
-	}else{
-		_=render.Render(writer, request, responses.List1expense(&temp))
-	}
+
+	expe:= request.Context().Value("expense").(types.Expense)
+		_=render.Render(writer, request, responses.List1expense(&expe))
 }
+
 func (db *Mysql) GetAll(writer http.ResponseWriter, request *http.Request) {
-	db.Db.Find(&expenses)
-	err = render.Render(writer, request, responses.NewExpensesResponse(&expenses))
+	var exp types.Expenses
+	db.Db.Find(&exp)
+	err = render.Render(writer, request, responses.NewExpensesResponse(&exp))
 	if err != nil {
 		render.Render(writer,request,errrs.ErrRender(err))
 		return
 	}
 }
 func (db *Mysql)Delete(writer http.ResponseWriter, request *http.Request) {
-	db.Db = request.Context().Value("expense").(*gorm.DB)
-	dB:= db.Db.Delete(&temp)
+	expe:= request.Context().Value("expense").(types.Expense)
+	dB:=db.Db.Delete(&expe)
 	if(dB.RowsAffected == 0){
-		err:=errors.New("unable to delete")
+		err:=errors.New("Expense not found")
 		render.Render(writer,request,errrs.ErrRender(err))
 		return
 	}else{
-		_=render.Render(writer, request, responses.List1expense(&temp))
+		_=render.Render(writer, request, responses.List1expense(&expe))
 	}
 }
