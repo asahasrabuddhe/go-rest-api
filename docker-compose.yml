@@ -2,7 +2,7 @@ version: "2.1"
 services:
   microservices:
     build: .
-    image: ayushcloud
+    image: arc1999/restapi
     # environment: 
     #   - "PORT 9090"
     ports:
