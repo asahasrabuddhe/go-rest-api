@@ -1,10 +1,16 @@
+FROM golang as builder
+WORKDIR /app
+COPY . .
+
+WORKDIR /app/Databases
+RUN ls
+RUN go build main.go
+
 FROM ubuntu
 # MAINTAINER Ayush
-#RUN mkdir app
-#RUN cd app/
-#WORKDIR app
-COPY  ./Databases/main /app/main
-RUN chmod +x /app/main
+
+COPY  --from=builder /app/Databases/main  /goapps/main
+RUN chmod +x /goapps/main
 # ENV PORT 8080
 EXPOSE 8080
-ENTRYPOINT /app/main
+ENTRYPOINT /goapps/main
