@@ -1,4 +1,4 @@
-package Testing
+package main
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
 )
 var D2 Interfaces.Databases
 
@@ -46,7 +47,7 @@ func TestGetId(t *testing.T) {
 	//q.Add("id", "1")
 	//req.URL.RawQuery = q.Encode()
 	rec := httptest.NewRecorder()
-	handler := http.HandlerFunc(fakeobj.GetId)
+	handler := http.HandlerFunc(fakeobj.ArticleCtx)
 	handler.ServeHTTP(rec, req)
 	if status := rec.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",

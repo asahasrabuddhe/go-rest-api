@@ -26,11 +26,11 @@ var err error
 var db1 Interfaces.Databases
 func main() {
 
-	dba, err := gorm.Open("mysql", "root:root@tcp(127.0.0.1:3306)/")
+	dba, err := gorm.Open("mysql", "root:root@tcp(cloudserver:3306)/")
 	dba.Exec("CREATE DATABASE IF NOT EXISTS"+" Expense1")
 	dba.Close()
 
-	db, err := gorm.Open("mysql", "root:root@tcp(127.0.0.1:3306)/Expense1?charset=utf8&parseTime=True")
+	db, err := gorm.Open("mysql", "root:root@tcp(cloudserver:3306)/Expense1?charset=utf8&parseTime=True")
 
 	if err != nil {
 		fmt.Println(err)
@@ -68,8 +68,7 @@ func (db *Mysql)ArticleCtx(next http.Handler) http.Handler {
 		var temp types.Expense
 		expenseID := chi.URLParam(r, "id")
 		DB:= db.Db.Table("expenses").Where("id = ?", expenseID).Find(&temp)
-		fmt.Println(temp)
-		if DB.RowsAffected == 0{
+				if DB.RowsAffected == 0{
 			err=errors.New("ID not Found")
 			render.Render(w, r, errrs.ErrRender(err))
 			return
@@ -97,8 +96,8 @@ func (db *Mysql)Update(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	expe=*req.Expense
-	expe.UpdatedOn=time.Now()
 	dB:= db.Db.Update(&expe)
+	fmt.Println(expe)
 			if(dB.RowsAffected == 0){
 				err:=errors.New("unable to update")
 				render.Render(writer,request,errrs.ErrRender(err))

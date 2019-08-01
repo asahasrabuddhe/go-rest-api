@@ -1,16 +1,24 @@
-FROM golang as builder
+FROM golang AS builder
 WORKDIR /app
-COPY . .
-
-WORKDIR /app/Databases
+COPY ./ ./
+WORKDIR  /app/Databases
 RUN ls
-RUN go build main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go
 
-FROM ubuntu
-# MAINTAINER Ayush
-
-COPY  --from=builder /app/Databases/main  /goapps/main
-RUN chmod +x /goapps/main
-# ENV PORT 8080
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /app
+COPY --from=builder /app/Databases/main /app/
+RUN ls
+RUN chmod +x /app/main
+ENTRYPOINT ["/app/main"]
 EXPOSE 8080
-ENTRYPOINT /goapps/main
+#FROM ubuntu
+# MAINTAINER Ayush
+#WORKDIR goapps
+
+#COPY  ./Databases/main  /goapps/main
+#RUN chmod +x /goapps/main
+# ENV PORT 8080
+#EXPOSE 8080
+#ENTRYPOINT /goapps/main
